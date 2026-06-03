@@ -1,8 +1,8 @@
 {
   "format_version": 2,
   "header": {
-    "name": "我的光影名称",
-    "description": "光影描述",
+    "name": "AsSunAndMoonMove",
+    "description": "blabla",
     "uuid": "22bd55da-277e-4afe-aaca-c3276a198fb1",
     "version": [1, 0, 0],
     "min_engine_version": [1, 21, 0]
