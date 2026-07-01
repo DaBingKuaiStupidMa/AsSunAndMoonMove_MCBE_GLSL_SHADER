@@ -1,7 +1,7 @@
 # AsSunAndMoonMove_MCBE_GLSL_SHADER
 原版补丁性质的超轻量光影：日月之行。令方块和实体的明暗面分布随着太阳和月亮的角度实时变化，同时更改了光源的作用机制等。云的外观有一点修改，夜间是青色的。
 
-<img width="2560" height="1600" alt="屏幕截图 2026-05-25 213255" src="https://github.com/user-attachments/assets/24716883-4a5f-4aed-b6c1-74f7a2fa589e" />
-<img width="2560" height="1600" alt="屏幕截图 2026-05-25 220518" src="https://github.com/user-attachments/assets/7717bfeb-1d29-4bc4-b03d-5c9140791299" />
-<img width="2560" height="1600" alt="屏幕截图 2026-06-13 232207" src="https://github.com/user-attachments/assets/dd659353-8749-49dc-9981-77c20a18ba05" />
-<img width="2560" height="1600" alt="屏幕截图 2026-05-26 140935" src="https://github.com/user-attachments/assets/884bd1f0-93b1-4854-b632-ffacd222e1e4" />
+<img width="2560" height="1600" alt="屏幕截图 2026-06-26 225434" src="https://github.com/user-attachments/assets/b6394a7c-94ed-4724-88b6-93c919daf44a" />
+<img width="2560" height="1600" alt="屏幕截图 2026-06-26 235853" src="https://github.com/user-attachments/assets/d16a6884-49a8-416a-9db5-298ca8184bf5" />
+<img width="2560" height="1600" alt="屏幕截图 2026-06-27 002136" src="https://github.com/user-attachments/assets/9bf79725-9663-4e0f-abe7-3a9183f07e62" />
+<img width="2560" height="1600" alt="屏幕截图 2026-06-26 233249" src="https://github.com/user-attachments/assets/d242bb72-f6b3-4abd-afe3-c97000c68764" />
