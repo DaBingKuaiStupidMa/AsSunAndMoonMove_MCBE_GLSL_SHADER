@@ -1,0 +1,134 @@
+// __multiversion__
+// This signals the loading code to prepend either #version 100 or #version 300 es as apropriate.
+
+precision highp float;
+#include "fragmentVersionCentroid.h"
+#include "uniformShaderConstants.h"
+#include "util.h"
+
+#if __VERSION__ >= 300
+	#if defined(TEXEL_AA) && defined(TEXEL_AA_FEATURE)
+		_centroid in highp vec2 uv;
+	#else
+		_centroid in vec2 uv;
+	#endif
+#else
+	varying vec2 uv;
+#endif
+LAYOUT_BINDING(0) uniform sampler2D TEXTURE_0;
+uniform float TOTAL_REAL_WORLD_TIME;
+uniform vec4 FOG_COLOR;
+uniform vec4 SUN_DIR;
+varying vec3 skyXYZ;
+// XZmxIs1000.0 // YmaxIs1256.0 // YminIs-744.0
+
+bool IsCld(vec2 xy, vec2 xy0){
+	highp int x=int(xy.x-0.0002*step(xy0.x,0.0)+0.0001);
+	highp int y=int(xy.y-0.0002*step(xy0.y,0.0)+0.0001);
+//	SALL NOT CHANGE
+	highp uint seed =uint(x) *0x9e3779b1u +uint(y) *0x85ebca6bu;
+    seed =(seed ^(seed >>16u)) *0x85ebca6bu;
+    seed =(seed ^(seed >>13u)) *0xc2b2ae35u;
+    seed = seed ^(seed >>16u);
+//	weather clear?
+    seed =seed >>16u;
+    const uint FILTER=uint(65536.0 *0.95);
+    return seed >FILTER;
+}
+
+#define MAGNIF 1.1
+#define x_IfHitQuitFind {\
+	if(xy0.x>0.0 ?\
+		(xy0.x+(xy2.x-xy1.x))*sky.y>(0.3+sky.y)*(xy0.x) :\
+		(xy0.x+(xy2.x-xy1.x))*sky.y<(0.3+sky.y)*(xy0.x)\
+	){\
+		newY=(xy0.x+(xy2.x-xy1.x))/xy0.x*sky.y;\
+		quit=true; break;\
+	}if(!quit &&IsCld(xy2, xy0)){\
+		normal.x=1.0;\
+		newY=(xy0.x+(xy2.x-xy1.x))/xy0.x*sky.y;\
+		quit=true; break;\
+	}\
+}
+#define y_IfHitQuitFind {\
+	if(xy0.y>0.0 ?\
+		(xy0.y+(xy2.y-xy1.y))*sky.y>(0.3+sky.y)*(xy0.y) :\
+		(xy0.y+(xy2.y-xy1.y))*sky.y<(0.3+sky.y)*(xy0.y)\
+	){\
+		newY=(xy0.y+(xy2.y-xy1.y))/xy0.y*sky.y;\
+		quit=true; break;\
+	}if(!quit &&IsCld(xy2, xy0)){\
+		normal.z=1.0;\
+		newY=(xy0.y+(xy2.y-xy1.y))/xy0.y*sky.y;\
+		quit=true; break;\
+	}\
+}
+
+void main(){
+	float DawnDusk=clamp(4.0*(SUN_DIR.y -0.1), 0.0, 1.0);
+//	sky
+	vec3 skydir=normalize(skyXYZ); float hyt=skydir.y;
+	vec3 sunat	=vec3(SUN_DIR.x*0.8660254038, SUN_DIR.y*0.8660254038, 0.5);
+	vec4 color	=vec4(0.15,0.05,0.15,1.0);
+    gl_FragColor=mix(FOG_COLOR, color, max(0.0, hyt));
+	gl_FragColor.a=1.0;
+
+//	clouds
+	color=mix(gl_FragColor, vec4(0.8,0.8,0.5,1.0), 0.2);
+	if(skydir.y<0.15)	return;
+    vec3 sky=skyXYZ;	float temp=1256.0/skyXYZ.y;
+	sky.xz*=temp; 		sky.y=1256.0;
+	sky*=1.0/(256.0*MAGNIF);
+	vec2 mov=vec2(0.25*TOTAL_REAL_WORLD_TIME);
+	vec2 xy0=sky.xz;
+    vec2 xy1=xy0 -mov; // sampling point
+    bool iscld=IsCld(xy1, xy0); // strictly-defined
+	float newY=sky.y; // cloud hyt limit
+	vec3 normal=vec3(0.0);
+	if(iscld) normal.y=1.0;
+	else{
+        vec2 xy2=floor(xy1); // frontier corner
+		xy2 =xy2+step(vec2(0.0), xy0); // correction
+	
+        vec2 Tstep=normalize(xy0); // direction
+        Tstep=vec2( // (co)secant
+            Tstep.x==0.0 ?2147483647.0 :1.0/Tstep.x,
+            Tstep.y==0.0 ?2147483647.0 :1.0/Tstep.y
+        );vec2 t=(xy2-xy1)*Tstep; // lengths along the dir
+
+		vec2 XYstep=sign(xy0); Tstep=abs(Tstep);
+		bool quit=false; // 1st step's special.
+		do{
+			if(t.x<t.y){
+				t.x+=Tstep.x; xy2.y-=XYstep.y;
+				x_IfHitQuitFind
+			}else{
+				t.y+=Tstep.y; xy2.x-=XYstep.x;
+				y_IfHitQuitFind
+			}
+		}while(false); // to use break;
+		lowp int n=0; while(!quit){
+            if(t.x<t.y){
+				t.x+=Tstep.x; xy2.x+=XYstep.x;
+				x_IfHitQuitFind
+            }else{
+				t.y+=Tstep.y; xy2.y+=XYstep.y;
+                y_IfHitQuitFind
+            }if(++n>2) break; // 注意到0.3/0.15=2
+        }
+    }
+
+//	Pure Sun And Moon Lyts
+	float lyt=abs(dot(normal, sunat));
+	lyt*=DawnDusk;
+	lyt=0.85 +0.1732 *lyt; // 0.1732是计算值
+	color.rgb*=vec3(lyt);
+	color.a*=clamp(1.0 -(newY-sky.y)*3.33333, 0.0, 1.0);
+
+//	Fog Included
+ 	color.a*=clamp(4.0*(skydir.y-0.15),0.0,1.0);
+
+//	sky and cloud mixed
+	gl_FragColor=mix(gl_FragColor,color,color.a);
+	gl_FragColor.a=1.0;
+}
