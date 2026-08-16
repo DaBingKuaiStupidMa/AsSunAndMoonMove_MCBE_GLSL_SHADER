@@ -1,0 +1,109 @@
+// __multiversion__
+// This signals the loading code to prepend either #version 100 or #version 300 es as apropriate.
+
+#include "vertexVersionCentroidUV.h"
+#include "uniformWorldConstants.h"
+#include "uniformEntityConstants.h"
+#include "uniformPerFrameConstants.h"
+#include "FeatherTools.h" // extra lib
+
+attribute mediump vec4 POSITION;
+attribute vec4 COLOR;
+attribute vec2 TEXCOORD_0;
+
+uniform vec4 SUN_DIR;
+varying vec4 color;
+
+#ifdef ENABLE_FOG
+	varying vec4 fogColor;
+#else 
+	vec4 fogColor=vec4(0.0);
+#endif
+
+#ifdef GLINT
+	varying vec2 layer1UV;
+	varying vec2 layer2UV;
+	vec2 calculateLayerUV(float offset, float rotation) {
+		vec2 uv =TEXCOORD_0 -vec2(0.5);
+		float rsin =sin(rotation);
+		float rcos =cos(rotation);
+		uv =mat2(rcos, -rsin, rsin, rcos) *uv;
+		uv.x +=offset; uv +=vec2(0.5);
+		return uv *GLINT_UV_SCALE;
+	}
+#endif
+
+//	由于attribute数据COLOR已经是混光结果，MOJANG我*你爹
+void main(){
+	gl_Position = WORLDVIEWPROJ * POSITION;
+	color = COLOR;
+	uv = TEXCOORD_0;
+
+#ifdef ENABLE_FOG
+    fogColor.rgb = FOG_COLOR.rgb;
+	fogColor.a = clamp(((gl_Position.z / RENDER_DISTANCE) - FOG_CONTROL.x) / (FOG_CONTROL.y - FOG_CONTROL.x), 0.0, 1.0);
+#endif
+
+#ifdef USE_LIGHTING
+	color *= vec4(TILE_LIGHT_COLOR.xyz, 1.0);
+#endif
+
+#ifdef ENABLE_FOG
+    fogColor.rgb =FOG_COLOR.rgb;
+	vec2 fog_control;
+	fog_control.x=FOG_CONTROL.x;
+	fog_control.y=mix(FOG_CONTROL.y,1.0,0.5);
+	float End1Hell2 =getEnd1Hell2(fogColor, FOG_CONTROL.x);
+
+	if(End1Hell2>1.5){ // visibility in hell enhanced
+		fog_control.y=mix(fog_control.y, 1.0, 0.8);
+	}fogColor.a =clamp(
+		((gl_Position.z /RENDER_DISTANCE) -fog_control.x)
+		/(fog_control.y -fog_control.x), 0.0, 1.0
+	);
+	vec3 normal=-(WORLD *POSITION).xyz;
+	normal=normalize(normal); // particles always face to camera.
+	vec3 sunDir=vec3(
+		SUN_DIR.x*0.8660254038,
+		SUN_DIR.y*0.8660254038,
+		0.5
+	);
+	float DawnDusk_4, DawnDusk_8, DawnDusk_16;
+	calcDawnDusk4_8_16
+
+//	方块光已经耦合在COLOR中，找不到原始的方块光。
+	float uv1_y=getGray(COLOR);
+	float dayClear=1.0;
+	if(End1Hell2<0.5) dayClear=getDayClear(FOG_CONTROL.y);
+	float lyt=getDiffuse( // 需要补偿反光，故乘1.1
+		sunDir, normal, DawnDusk_8, 1.1*uv1_y, SUN_DIR.w>0.5, End1Hell2>0.5, dayClear
+	);
+
+	if(SUN_DIR.w<0.5) lyt=max(getGray(COLOR), lyt);
+	else if(DawnDusk_4<1.0) lyt=mix(lyt, max(getGray(COLOR), lyt), 1.0-DawnDusk_4);
+
+	vec3 ambience=vec3(1.0);
+	if(End1Hell2==1.0){
+	//	end ambience
+		ambience +=vec3(0.08,-0.16,0.08);
+	}ambience*=vec3(lyt);
+
+	/*bool shallSave =( // 落叶的检测困难，原版粒子在地底岩浆附近偏红
+		color.r<color.g && color.b<color.g || // 草丛
+		color.g<color.b*0.5 && color.b<color.r || // 末地粒子 
+		color.r>color.g*1.3 && color.r>color.b*1.3 // 暴击粒子
+	);if(shallSave)*/{
+		float rgbMaxInv =max(max(color.r, color.g), color.b);
+		if(rgbMaxInv!=1.0){
+			rgbMaxInv =1.0 /max(rgbMaxInv,0.01); // overexposure avoided
+			color.rgb*=vec3(rgbMaxInv);
+		}
+		color.rgb*=ambience; // necessary color reserved
+	}/*else color.rgb=ambience;*/ // default ambience discarded
+#endif
+
+#ifdef GLINT
+	layer1UV =calculateLayerUV(UV_OFFSET.x, UV_ROTATION.x);
+	layer2UV =calculateLayerUV(UV_OFFSET.y, UV_ROTATION.y);
+#endif
+}
