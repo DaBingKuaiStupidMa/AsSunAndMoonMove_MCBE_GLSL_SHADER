@@ -1,0 +1,94 @@
+{
+    "format_version": "1.21.40",
+    /* 为了捍卫removeFacing的有效性，责令一切AO指数为1.0 */
+    "sand": {
+        "ambient_occlusion_exponent": 1.0
+    },
+    "sandstone": {
+        "ambient_occlusion_exponent": 1.0
+    },
+    "obsidian": {
+        "ambient_occlusion_exponent": 1.0
+    },
+    "snow_layer": {
+        "ambient_occlusion_exponent": 1.0
+    },
+    "snow": {
+        "ambient_occlusion_exponent": 1.0
+    },
+    "nether_brick": {
+        "ambient_occlusion_exponent": 1.0
+    },
+    "red_nether_brick": {
+        "ambient_occlusion_exponent": 1.0
+    },
+    "red_sandstone": {
+        "ambient_occlusion_exponent": 1.0
+    },
+    "red_nether_brick_stairs": {
+        "ambient_occlusion_exponent": 1.0
+    },
+    "respawn_anchor": {
+        "ambient_occlusion_exponent": 1.0
+    },
+    "crying_obsidian": {
+        "ambient_occlusion_exponent": 1.0
+    },
+    "azalea_leaves": {
+        "ambient_occlusion_exponent": 1.0
+    },
+    "azalea_leaves_flowered": {
+        "ambient_occlusion_exponent": 1.0
+    },
+    "mangrove_leaves": {
+        "ambient_occlusion_exponent": 1.0
+    },
+    "suspicious_sand": {
+        "ambient_occlusion_exponent": 1.0
+    },
+    "cherry_leaves": {
+        "ambient_occlusion_exponent": 1.0
+    },
+    "oak_leaves": {
+        "ambient_occlusion_exponent": 1.0
+    },
+    "birch_leaves": {
+        "ambient_occlusion_exponent": 1.0
+    },
+    "jungle_leaves": {
+        "ambient_occlusion_exponent": 1.0
+    },
+    "spruce_leaves": {
+        "ambient_occlusion_exponent": 1.0
+    },
+    "acacia_leaves": {
+        "ambient_occlusion_exponent": 1.0
+    },
+    "dark_oak_leaves": {
+        "ambient_occlusion_exponent": 1.0
+    },
+    "chiseled_sandstone": {
+        "ambient_occlusion_exponent": 1.0
+    },
+    "cut_sandstone": {
+        "ambient_occlusion_exponent": 1.0
+    },
+    "smooth_sandstone": {
+        "ambient_occlusion_exponent": 1.0
+    },
+    "chiseled_red_sandstone": {
+        "ambient_occlusion_exponent": 1.0
+    },
+    "cut_red_sandstone": {
+        "ambient_occlusion_exponent": 1.0
+    },
+    "smooth_red_sandstone": {
+        "ambient_occlusion_exponent": 1.0
+    },
+    "red_sand": {
+        "ambient_occlusion_exponent": 1.0
+    },
+    "pale_oak_leaves": {
+        "ambient_occlusion_exponent": 1.0
+    }
+}

@@ -1,0 +1,137 @@
+// __multiversion__
+// This signals the loading code to prepend either #version 100 or #version 300 es as apropriate.
+
+#include "vertexVersionCentroid.h"
+#include "uniformWorldConstants.h"
+#include "uniformPerFrameConstants.h"
+#include "uniformShaderConstants.h"
+#include "uniformRenderChunkConstants.h"
+#include "FeatherTools.h" // extra lib
+
+#if __VERSION__ >= 300
+	#ifndef BYPASS_PIXEL_SHADER
+		_centroid out vec2 uv0;
+		_centroid out vec2 uv1;
+	#endif
+#else
+	#ifndef BYPASS_PIXEL_SHADER
+		varying vec2 uv0;
+		varying vec2 uv1;
+	#endif
+#endif
+
+#ifndef BYPASS_PIXEL_SHADER
+	varying vec4 color;
+#endif
+
+#ifdef FOG
+	varying vec4 fogColor;
+#else
+	vec4 fogColor=vec4(0.0); // well-defined
+#endif
+
+attribute POS4 POSITION;
+attribute vec4 COLOR;
+attribute vec2 TEXCOORD_0, TEXCOORD_1;
+
+const float rA = 1.0;
+const float rB = 1.0;
+const vec3 UNIT_Y = vec3(0,1,0);
+const float DIST_DESATURATION = 56.0 / 255.0; //WARNING this value is also hardcoded in the water color, don'tchange
+
+uniform vec4 SUN_DIR;
+varying vec3 worldXYZ, sunDir, fakeSun, fakeNml, v_DawnDusk;
+varying float End1Hell2, dayClear;
+
+void main(){
+	POS4 worldPos; 
+#ifdef AS_ENTITY_RENDERER
+		POS4 pos = WORLDVIEWPROJ * POSITION;
+		worldPos = pos;
+#else
+    worldPos.xyz = (POSITION.xyz * CHUNK_ORIGIN_AND_SCALE.w) + CHUNK_ORIGIN_AND_SCALE.xyz;
+    worldPos.w = 1.0;
+    // Transform to view space before projection instead of all at once to avoid floating point errors
+    // Not required for entities because they are already offset by camera translation before rendering
+    // World position here is calculated above and can get huge
+    POS4 pos = WORLDVIEW * worldPos;
+    pos = PROJ * pos;
+#endif
+	gl_Position = pos;
+	worldXYZ=worldPos.xyz; // for normal vectors
+#ifndef BYPASS_PIXEL_SHADER
+    uv0 = TEXCOORD_0;
+    uv1 = TEXCOORD_1; uv1.x*=uv1.x; // 引入平方衰减
+	color = COLOR;
+#endif
+
+//	find distance from the camera
+
+#if defined(FOG) || defined(BLEND)
+	#ifdef FANCY
+		vec3 relPos = -worldPos.xyz;
+		float cameraDepth = length(relPos);
+	#else
+		float cameraDepth = pos.z;
+	#endif
+#endif
+
+v_DawnDusk.x=DawnDusk(4.0,SUN_DIR);
+v_DawnDusk.y=DawnDusk(8.0,SUN_DIR);
+v_DawnDusk.z=DawnDusk(16.0,SUN_DIR);
+End1Hell2=0.0;
+
+#ifdef FOG
+	float len =cameraDepth /RENDER_DISTANCE;
+	#ifdef ALLOW_FADE
+		len += RENDER_CHUNK_FOG_ALPHA;
+	#endif
+    fogColor.rgb =FOG_COLOR.rgb;
+	End1Hell2 =getEnd1Hell2(fogColor, FOG_CONTROL.x);
+	if(End1Hell2<0.5 && FOG_CONTROL.x>0.01) dayClear=getDayClear(FOG_CONTROL.y);
+	else dayClear=1.0;
+
+	vec2 fog_control;
+	fog_control.x=FOG_CONTROL.x;
+	if(End1Hell2>1.5){ // visibility in hell enhanced
+		fog_control.y=1.0;
+	}else{ // for water?
+		fog_control.y=mix(FOG_CONTROL.y, 1.0, 0.05);
+	}fogColor.a =clamp((len -fog_control.x) /(fog_control.y -fog_control.x), 0.0, 1.0);
+#endif
+sunDir=vec3(SUN_DIR.x*0.8660254038, SUN_DIR.y*0.8660254038, 0.5);
+fakeSun=vec3(SUN_DIR.x*0.9539392014, SUN_DIR.y*0.9539392014, 0.3);
+
+vec3 viewDir=normalize(worldXYZ);
+fakeNml=fakeSun-viewDir;
+fakeNml=normalize(fakeNml); // 将阳光恰好反射到摄像机所需的法向
+
+//	blended layer (mostly water) magic
+#ifdef BLEND
+//	Mega hack: only things that become opaque are allowed to have vertex-driven transparency in the Blended layer...
+//	to fix this we'd need to find more space for a flag in the vertex format. color.a is the only unused part
+	bool shouldBecomeOpaqueInTheDistance = color.a < 0.95;
+	if(shouldBecomeOpaqueInTheDistance) {
+		#ifdef FANCY // enhance water
+			float cameraDist =cameraDepth /RENDER_DISTANCE;
+			color = COLOR;
+		#else
+//	Completely insane, but if I don't have these two lines in here, the water doesn't render on a Nexus 6
+			vec4 surfColor = vec4(color.rgb, 1.0);
+			color = surfColor;
+			vec3 relPos = -worldPos.xyz;
+			float camDist = length(relPos);
+			float cameraDist =camDist /RENDER_DISTANCE;
+		#endif // FANCY
+		float alphaFadeOut =clamp(cameraDist, 0.0, 1.0);
+		color.a =mix(color.a, 1.0, alphaFadeOut); // 由于cameraDist的定义被修改，水其实更透明了
+	}
+#endif
+
+#ifndef BYPASS_PIXEL_SHADER
+	#ifndef FOG
+		// If the FOG_COLOR isn't used, the reflection on NVN fails to compute the correct size of the constant buffer as the uniform will also be gone from the reflection data
+		color.rgb += FOG_COLOR.rgb * 0.000001;
+	#endif
+#endif
+}
